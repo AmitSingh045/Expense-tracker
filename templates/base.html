@@ -1,0 +1,202 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Antigravity Pay - Modern Personal Finance Management System">
+    <title>{% block title %}Personal Finance Manager{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <!-- Custom Design System -->
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="{% if user.is_authenticated and user.profile.dark_mode %}dark-mode{% endif %}">
+
+    <div class="app-container">
+        {% if user.is_authenticated %}
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div>
+                <a href="{% url 'dashboard' %}" class="sidebar-logo">
+                    <i class="bi bi-wallet2"></i>
+                    <span>Antigravity Pay</span>
+                </a>
+                
+                <ul class="nav-menu">
+                    <li>
+                        <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                            <i class="bi bi-grid-1x2"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'transactions_list' %}" class="nav-link {% if request.resolver_match.url_name == 'transactions_list' %}active{% endif %}">
+                            <i class="bi bi-arrow-left-right"></i>
+                            <span>Transactions</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'budgets_list' %}" class="nav-link {% if request.resolver_match.url_name == 'budgets_list' %}active{% endif %}">
+                            <i class="bi bi-pie-chart"></i>
+                            <span>Budgets</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'goals_list' %}" class="nav-link {% if request.resolver_match.url_name == 'goals_list' %}active{% endif %}">
+                            <i class="bi bi-trophy"></i>
+                            <span>Savings Goals</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'bills_list' %}" class="nav-link {% if request.resolver_match.url_name == 'bills_list' %}active{% endif %}">
+                            <i class="bi bi-calendar-event"></i>
+                            <span>Bills</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'reports_list' %}" class="nav-link {% if request.resolver_match.url_name == 'reports_list' %}active{% endif %}">
+                            <i class="bi bi-file-earmark-bar-graph"></i>
+                            <span>Reports</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- User Section / Bottom Sidebar -->
+            <div class="sidebar-footer">
+                <a href="{% url 'profile' %}" class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %} mb-2">
+                    <i class="bi bi-person-circle"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="{% url 'logout' %}" class="nav-link text-danger">
+                    <i class="bi bi-box-arrow-left text-danger"></i>
+                    <span>Log Out</span>
+                </a>
+            </div>
+        </aside>
+        {% endif %}
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            {% if user.is_authenticated %}
+            <!-- Top Dashboard Bar -->
+            <header class="top-bar d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-light-subtle">
+                <div class="d-flex align-items-center gap-3">
+                    <!-- Mobile Hamburger -->
+                    <button class="mobile-menu-btn" id="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Open menu">
+                        <i class="bi bi-list"></i>
+                    </button>
+
+                    <div class="search-box glass-panel d-flex align-items-center px-3 py-2">
+                        <form action="{% url 'transactions_list' %}" method="GET" class="d-flex w-100 align-items-center">
+                            <i class="bi bi-search text-secondary me-2"></i>
+                            <input type="text" name="q" placeholder="Search everywhere..." class="bg-transparent border-0 w-100 text-body" style="outline: none; font-size: 0.875rem;" value="{{ q }}">
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Light/Dark Mode Switcher -->
+                    <button class="btn btn-sm glass-panel p-2 rounded-3 text-body d-flex align-items-center justify-content-center" id="theme-toggle" style="width: 38px; height: 38px;" aria-label="Toggle theme">
+                        {% if user.profile.dark_mode %}
+                            <i class="bi bi-sun"></i>
+                        {% else %}
+                            <i class="bi bi-moon"></i>
+                        {% endif %}
+                    </button>
+                    
+                    <!-- Quick Profile Indicator -->
+                    <a href="{% url 'profile' %}" class="d-flex align-items-center gap-2 text-decoration-none text-body">
+                        {% if user.profile.avatar %}
+                            <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">
+                        {% else %}
+                            <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px; font-size: 0.85rem;">
+                                {{ user.username|slice:":1"|upper }}
+                            </div>
+                        {% endif %}
+                        <div class="d-none d-md-block">
+                            <div class="fw-semibold lh-1" style="font-size: 0.85rem;">{{ user.username }}</div>
+                            <small class="text-secondary" style="font-size: 0.7rem;">Premium Account</small>
+                        </div>
+                    </a>
+                </div>
+            </header>
+            {% endif %}
+
+            <!-- Dynamic Child Content -->
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Django Message System to Client Toasts -->
+    <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="toast align-items-center show border-0 rounded-4 glass-card p-2 text-white bg-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% else %}primary{% endif %}" role="alert" style="min-width: 250px;">
+                    <div class="d-flex">
+                        <div class="toast-body fw-semibold">
+                            {{ message }}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js UMD CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.js"></script>
+    
+    <!-- Custom Application Engine -->
+    <script src="{% static 'js/app.js' %}"></script>
+
+    <!-- Mobile Sidebar Toggle Script -->
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+            }
+        }
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+        // Close sidebar on nav click (mobile)
+        document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 992) closeSidebar();
+            });
+        });
+        // Auto-dismiss toasts
+        document.querySelectorAll('.toast.show').forEach(toast => {
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

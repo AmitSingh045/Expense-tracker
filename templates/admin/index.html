@@ -1,0 +1,106 @@
+{% extends "admin/index.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .admin-stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 35px;
+        margin-top: 15px;
+    }
+    .admin-stat-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .admin-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
+    }
+    .stat-label {
+        font-size: 11px;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        margin-bottom: 6px;
+    }
+    .stat-value {
+        font-size: 26px;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    .stat-meta {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 8px;
+    }
+    .stat-icon {
+        float: right;
+        font-size: 24px;
+        color: #3b82f6;
+        opacity: 0.15;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h2 style="margin-bottom: 5px; font-weight: 700; color: #1e293b;">System Management Overview</h2>
+    <p style="color: #64748b; font-size: 13px; margin-bottom: 25px;">Real-time metrics aggregated across all active workspaces.</p>
+    
+    <div class="admin-stats-container">
+        <!-- Users Card -->
+        <div class="admin-stat-card">
+            <span class="stat-icon">&#128101;</span>
+            <div class="stat-label">User Accounts</div>
+            <div class="stat-value">{{ total_users }}</div>
+            <div class="stat-meta">{{ active_users }} Active Profiles</div>
+        </div>
+        
+        <!-- Volume Card -->
+        <div class="admin-stat-card">
+            <span class="stat-icon">&#128184;</span>
+            <div class="stat-label">Transactions (Today)</div>
+            <div class="stat-value">{{ total_transactions }} <span style="font-size: 15px; font-weight: 500; color: #64748b;">({{ today_transactions }})</span></div>
+            <div class="stat-meta">Total database entries</div>
+        </div>
+
+        <!-- Monthly Balance -->
+        <div class="admin-stat-card">
+            <span class="stat-icon">&#128200;</span>
+            <div class="stat-label">Monthly Flow (USD)</div>
+            <div class="stat-value" style="font-size: 20px;">
+                <span style="color: #10b981;">+${{ monthly_income|stringformat:".2f" }}</span>
+                <span style="color: #64748b; font-size: 14px;">/</span>
+                <span style="color: #ef4444;">-${{ monthly_expense|stringformat:".2f" }}</span>
+            </div>
+            <div class="stat-meta">Income vs Outflow (Current Month)</div>
+        </div>
+
+        <!-- Savings -->
+        <div class="admin-stat-card">
+            <span class="stat-icon">&#127942;</span>
+            <div class="stat-label">Goal Savings</div>
+            <div class="stat-value">${{ total_savings|stringformat:".2f" }}</div>
+            <div class="stat-meta">{{ goal_completion_rate }}% completion milestone rate</div>
+        </div>
+
+        <!-- Limits -->
+        <div class="admin-stat-card">
+            <span class="stat-icon">&#128276;</span>
+            <div class="stat-label">Limits & Schedules</div>
+            <div class="stat-value">{{ active_budgets }} <span style="font-size: 15px; font-weight: 500; color: #64748b;">/ {{ pending_bills }}</span></div>
+            <div class="stat-meta">Budgets set / Unpaid due bills</div>
+        </div>
+    </div>
+</div>
+
+{{ block.super }}
+{% endblock %}

@@ -1,0 +1,469 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Transactions | Antigravity Pay{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h1 class="fw-bold mb-1">Transactions</h1>
+            <p class="text-secondary mb-0 d-none d-md-block">Record, filter, search, and import/export your transaction logs.</p>
+        </div>
+        <div class="d-flex gap-2 page-header-actions flex-wrap">
+            <button class="btn btn-glass-secondary" data-bs-toggle="modal" data-bs-target="#importModal">
+                <i class="bi bi-file-earmark-arrow-up me-1"></i><span class="d-none d-sm-inline">Import</span>
+            </button>
+            <a href="/api/transactions/export/" class="btn btn-glass-secondary">
+                <i class="bi bi-file-earmark-arrow-down me-1"></i><span class="d-none d-sm-inline">Export</span>
+            </a>
+            <button class="btn btn-glass-primary shadow" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
+                <i class="bi bi-plus-lg me-1"></i>Add Record
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter & Search Bar Panel -->
+    <div class="glass-card p-4 mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label small fw-semibold text-secondary">Search</label>
+                <input type="text" name="q" class="form-control glass-input" placeholder="Title, tag, location..." value="{{ q }}">
+            </div>
+            
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-secondary">Category</label>
+                <select name="category" class="form-select glass-input">
+                    <option value="">All Categories</option>
+                    {% for c in categories %}
+                        <option value="{{ c.id }}" {% if selected_category == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-secondary">Type</label>
+                <select name="type" class="form-select glass-input">
+                    <option value="">All Types</option>
+                    <option value="Expense" {% if selected_type == 'Expense' %}selected{% endif %}>Expense</option>
+                    <option value="Income" {% if selected_type == 'Income' %}selected{% endif %}>Income</option>
+                    <option value="Transfer" {% if selected_type == 'Transfer' %}selected{% endif %}>Transfer</option>
+                    <option value="Refund" {% if selected_type == 'Refund' %}selected{% endif %}>Refund</option>
+                    <option value="Investment" {% if selected_type == 'Investment' %}selected{% endif %}>Investment</option>
+                    <option value="Loan" {% if selected_type == 'Loan' %}selected{% endif %}>Loan</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-secondary">Date Filter</label>
+                <select name="date_filter" id="date-filter-select" class="form-select glass-input" onchange="toggleCustomDates()">
+                    <option value="" {% if not date_filter %}selected{% endif %}>Anytime</option>
+                    <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Today</option>
+                    <option value="yesterday" {% if date_filter == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                    <option value="week" {% if date_filter == 'week' %}selected{% endif %}>This Week</option>
+                    <option value="month" {% if date_filter == 'month' %}selected{% endif %}>This Month</option>
+                    <option value="year" {% if date_filter == 'year' %}selected{% endif %}>This Year</option>
+                    <option value="custom" {% if date_filter == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-glass-primary w-50"><i class="bi bi-filter me-2"></i>Filter</button>
+                <a href="{% url 'transactions_list' %}" class="btn btn-glass-secondary w-50">Reset</a>
+            </div>
+            
+            <!-- Custom Date Inputs (collapsible based on selection) -->
+            <div class="col-12 mt-2 {% if date_filter != 'custom' %}d-none{% endif %}" id="custom-date-container">
+                <div class="row g-2">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-semibold text-secondary">Start Date</label>
+                        <input type="date" name="start_date" class="form-control glass-input" value="{{ start_date }}">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-semibold text-secondary">End Date</label>
+                        <input type="date" name="end_date" class="form-control glass-input" value="{{ end_date }}">
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="glass-card p-4">
+        <!-- Table Toolbar -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="bulk-actions d-flex gap-2 align-items-center d-none" id="bulk-toolbar">
+                <span class="text-secondary small fw-semibold" id="selected-count">0 selected</span>
+                <button class="btn btn-sm btn-outline-danger py-1" onclick="triggerBulkDelete()">
+                    <i class="bi bi-trash me-1"></i>Delete Selected
+                </button>
+            </div>
+            <div class="ms-auto d-flex align-items-center gap-2">
+                <small class="text-secondary fw-semibold">Sort By</small>
+                <select class="form-select form-select-sm glass-input py-1" style="width: 150px;" onchange="updateSort(this.value)">
+                    <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest</option>
+                    <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest</option>
+                    <option value="highest" {% if sort == 'highest' %}selected{% endif %}>Highest Amount</option>
+                    <option value="lowest" {% if sort == 'lowest' %}selected{% endif %}>Lowest Amount</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table align-middle table-hover" id="tx-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">
+                            <input class="form-check-input glass-input" type="checkbox" id="check-all" onclick="toggleAllCheckboxes(this)">
+                        </th>
+                        <th>Record</th>
+                        <th>Category</th>
+                        <th>Payment Method</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th style="width: 100px; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if page_obj %}
+                        {% for t in page_obj %}
+                            <tr>
+                                <td>
+                                    <input class="form-check-input glass-input tx-checkbox" type="checkbox" value="{{ t.id }}" onclick="updateBulkToolbar()">
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-body-secondary p-2 rounded-3 text-center" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                            <i class="bi {{ t.category.icon }} fs-5" style="color: {{ t.category.color }};"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">{{ t.title }}</div>
+                                            {% if t.tags %}
+                                                <div class="mt-1">
+                                                    {% for tag in t.tags.split|slice:":3" %}
+                                                        <span class="badge bg-secondary-subtle text-secondary mr-1" style="font-size: 0.65rem;">{{ tag }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ t.category.name }}</td>
+                                <td>
+                                    <i class="bi {{ t.payment_method.icon }} text-secondary me-2"></i>{{ t.payment_method.name }}
+                                </td>
+                                <td>{{ t.date }}</td>
+                                <td>
+                                    <span class="badge {% if t.transaction_type == 'Income' %}text-success bg-success-subtle{% else %}text-danger bg-danger-subtle{% endif %} fs-6 fw-semibold">
+                                        {% if t.transaction_type == 'Income' %}+{% else %}-{% endif %} {{ t.currency.symbol }}{{ t.amount }}
+                                    </span>
+                                </td>
+                                <td align="right">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-glass-secondary p-1 px-2 border-0" data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end glass-panel border-0 shadow">
+                                            {% if t.receipt %}
+                                                <li><a class="dropdown-item small" href="#" onclick="showReceiptModal('{{ t.receipt.file.url }}', '{{ t.receipt.ocr_raw_text|escapejs }}')">View Receipt</a></li>
+                                            {% endif %}
+                                            <li><a class="dropdown-item small" href="#" onclick="openEditModal({{ t.id }}, '{{ t.title }}', '{{ t.amount }}', '{{ t.transaction_type }}', '{{ t.category.id }}', '{{ t.payment_method.id }}', '{{ t.currency.id }}', '{{ t.date|date:'Y-m-d' }}', '{{ t.tags|default_if_none:'' }}', '{{ t.location|default_if_none:'' }}', '{{ t.description|default_if_none:'' }}')">Edit Details</a></li>
+                                            <li>
+                                                <form action="{% url 'transactions_list' %}" method="POST" onsubmit="return confirm('Are you sure you want to delete this transaction?')">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="delete_transaction">
+                                                    <input type="hidden" name="transaction_id" value="{{ t.id }}">
+                                                    <button type="submit" class="dropdown-item text-danger small">Delete</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-secondary">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>No transactions found matching criteria.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+            <nav class="d-flex justify-content-between align-items-center mt-4">
+                <span class="small text-secondary">Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                <ul class="pagination pagination-sm mb-0 gap-1">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link glass-card py-2 border-0" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&category={{ selected_category }}&type={{ selected_type }}&date_filter={{ date_filter }}&start_date={{ start_date }}&end_date={{ end_date }}&sort={{ sort }}">Previous</a></li>
+                    {% endif %}
+                    {% for i in page_obj.paginator.page_range %}
+                        <li class="page-item {% if page_obj.number == i %}active{% endif %}"><a class="page-link glass-card py-2 border-0" href="?page={{ i }}&q={{ q }}&category={{ selected_category }}&type={{ selected_type }}&date_filter={{ date_filter }}&start_date={{ start_date }}&end_date={{ end_date }}&sort={{ sort }}">{{ i }}</a></li>
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                        <li class="page-item"><a class="page-link glass-card py-2 border-0" href="?page={{ page_obj.next_page_number }}&q={{ q }}&category={{ selected_category }}&type={{ selected_type }}&date_filter={{ date_filter }}&start_date={{ start_date }}&end_date={{ end_date }}&sort={{ sort }}">Next</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    </div>
+</div>
+
+<!-- EDIT TRANSACTION MODAL -->
+<div class="modal fade" id="editTransactionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-panel border-0 rounded-4 p-3" style="background: var(--bg-sidebar);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Edit Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{% url 'transactions_list' %}" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_transaction">
+                <input type="hidden" name="transaction_id" id="edit-tx-id">
+                
+                <div class="modal-body py-3">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Title</label>
+                            <input type="text" name="title" id="edit-title" required class="form-control glass-input">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Amount</label>
+                            <input type="number" step="0.01" name="amount" id="edit-amount" required class="form-control glass-input">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Type</label>
+                            <select name="transaction_type" id="edit-type" required class="form-select glass-input">
+                                <option value="Expense">Expense</option>
+                                <option value="Income">Income</option>
+                                <option value="Transfer">Transfer</option>
+                                <option value="Refund">Refund</option>
+                                <option value="Investment">Investment</option>
+                                <option value="Loan">Loan</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Category</label>
+                            <select name="category" id="edit-category" required class="form-select glass-input">
+                                {% for c in categories %}
+                                    <option value="{{ c.id }}">{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Payment Method</label>
+                            <select name="payment_method" id="edit-payment_method" required class="form-select glass-input">
+                                {% for pm in payment_methods %}
+                                    <option value="{{ pm.id }}">{{ pm.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Currency</label>
+                            <select name="currency" id="edit-currency" required class="form-select glass-input">
+                                {% for cur in currencies %}
+                                    <option value="{{ cur.id }}">{{ cur.code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Date</label>
+                            <input type="date" name="date" id="edit-date" class="form-control glass-input">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Tags</label>
+                            <input type="text" name="tags" id="edit-tags" class="form-control glass-input" placeholder="comma separated">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Location</label>
+                            <input type="text" name="location" id="edit-location" class="form-control glass-input">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Description</label>
+                            <textarea name="description" id="edit-description" class="form-control glass-input" rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Update Receipt File</label>
+                            <input type="file" name="receipt_file" class="form-control glass-input">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-glass-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-glass-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- CSV IMPORT MODAL -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-panel border-0 rounded-4 p-3" style="background: var(--bg-sidebar);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Import CSV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="small text-secondary mb-3">Upload a CSV file containing transactions. Make sure headings include <strong>Title, Amount, Type, Date, Category, Tags, Location</strong>.</p>
+                <form id="import-form" enctype="multipart/form-data">
+                    <input type="file" name="file" id="csv-file-input" required class="form-control glass-input">
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-glass-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-glass-primary" onclick="submitImportCSV()">Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VIEW RECEIPT MODAL -->
+<div class="modal fade" id="receiptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-panel border-0 rounded-4 p-3" style="background: var(--bg-sidebar);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Receipt Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <img src="" id="receipt-preview-img" alt="Receipt Upload" class="img-fluid rounded-4 shadow" style="max-height: 400px; width: 100%; object-fit: contain;">
+                    </div>
+                    <div class="col-12 col-md-6 bg-body-secondary p-3 rounded-4 glass-panel border-0">
+                        <h6 class="fw-bold mb-2 text-primary"><i class="bi bi-file-earmark-text me-2"></i>Parsed OCR Data</h6>
+                        <pre id="receipt-ocr-text" class="small text-body font-monospace" style="white-space: pre-wrap; font-family: monospace;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ADD TRANSACTION MODAL SKELETON (Included for category navigation modal) -->
+{% include 'analytics/dashboard.html' with only_modals=True %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleCustomDates() {
+        const val = document.getElementById('date-filter-select').value;
+        const container = document.getElementById('custom-date-container');
+        if (val === 'custom') {
+            container.classList.remove('d-none');
+        } else {
+            container.classList.add('d-none');
+        }
+    }
+
+    function updateSort(sortVal) {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('sort', sortVal);
+        window.location.search = urlParams.toString();
+    }
+
+    // Edit modal helper
+    function openEditModal(id, title, amount, type, category, pm, currency, date, tags, location, desc) {
+        document.getElementById('edit-tx-id').value = id;
+        document.getElementById('edit-title').value = title;
+        document.getElementById('edit-amount').value = amount;
+        document.getElementById('edit-type').value = type;
+        document.getElementById('edit-category').value = category;
+        document.getElementById('edit-payment_method').value = pm;
+        document.getElementById('edit-currency').value = currency;
+        document.getElementById('edit-date').value = date;
+        document.getElementById('edit-tags').value = tags;
+        document.getElementById('edit-location').value = location;
+        document.getElementById('edit-description').value = desc;
+
+        const editModal = new bootstrap.Modal(document.getElementById('editTransactionModal'));
+        editModal.show();
+    }
+
+    // Receipt modal preview
+    function showReceiptModal(url, ocrText) {
+        document.getElementById('receipt-preview-img').src = url;
+        document.getElementById('receipt-ocr-text').innerText = ocrText;
+        const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+        modal.show();
+    }
+
+    // Checkbox toggles for bulk delete
+    function toggleAllCheckboxes(master) {
+        const checkBoxes = document.querySelectorAll('.tx-checkbox');
+        checkBoxes.forEach(c => c.checked = master.checked);
+        updateBulkToolbar();
+    }
+
+    function updateBulkToolbar() {
+        const checked = document.querySelectorAll('.tx-checkbox:checked');
+        const toolbar = document.getElementById('bulk-toolbar');
+        const label = document.getElementById('selected-count');
+        if (checked.length > 0) {
+            toolbar.classList.remove('d-none');
+            label.innerText = `${checked.length} selected`;
+        } else {
+            toolbar.classList.add('d-none');
+        }
+    }
+
+    function triggerBulkDelete() {
+        const checked = document.querySelectorAll('.tx-checkbox:checked');
+        const ids = Array.from(checked).map(c => parseInt(c.value));
+        if (ids.length === 0) return;
+        
+        if (!confirm(`Are you sure you want to delete ${ids.length} selected transactions?`)) return;
+        
+        const csrfToken = '{{ csrf_token }}';
+        fetch('/api/transactions/bulk-delete/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ ids: ids })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.deleted_count !== undefined) {
+                window.location.reload();
+            }
+        });
+    }
+
+    // AJAX Import CSV
+    function submitImportCSV() {
+        const input = document.getElementById('csv-file-input');
+        if (!input.files || input.files.length === 0) return;
+        
+        const formData = new FormData();
+        formData.append('file', input.files[0]);
+        
+        const csrfToken = '{{ csrf_token }}';
+        fetch('/api/transactions/import/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status) {
+                alert(data.status);
+                window.location.reload();
+            } else if (data.error) {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
+</script>
+{% endblock %}

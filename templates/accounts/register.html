@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign Up | Antigravity Pay{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="w-100" style="max-width: 440px;">
+        <div class="glass-card p-4 p-md-5">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center text-white p-3 rounded-4 mb-3 shadow" style="background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));">
+                    <i class="bi bi-wallet2 fs-3"></i>
+                </div>
+                <h2 class="fw-bold mb-1">Create Account</h2>
+                <p class="text-secondary mb-0" style="font-size: 0.9rem;">Join us and start optimizing your wealth today.</p>
+            </div>
+            
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text glass-input border-end-0 bg-transparent text-secondary"><i class="bi bi-person"></i></span>
+                        <input type="text" name="username" required class="form-control glass-input border-start-0" placeholder="Pick a username">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Email Address</label>
+                    <div class="input-group">
+                        <span class="input-group-text glass-input border-end-0 bg-transparent text-secondary"><i class="bi bi-envelope"></i></span>
+                        <input type="email" name="email" required class="form-control glass-input border-start-0" placeholder="Enter your email">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text glass-input border-end-0 bg-transparent text-secondary"><i class="bi bi-lock"></i></span>
+                        <input type="password" name="password" required class="form-control glass-input border-start-0" placeholder="Choose password">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold">Confirm Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text glass-input border-end-0 bg-transparent text-secondary"><i class="bi bi-lock-fill"></i></span>
+                        <input type="password" name="password_confirm" required class="form-control glass-input border-start-0" placeholder="Verify password">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-glass-primary w-100 py-3 mb-4 shadow fw-bold">Sign Up</button>
+                
+                <div class="text-center">
+                    <span class="small text-secondary">Already have an account? </span>
+                    <a href="{% url 'login' %}" class="small text-decoration-none fw-bold">Sign In</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
