@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-t*-7o0)ooyx0gnsisouv(w2z_(jxk574xcea(5ha4((zx48taz')
+SECRET_KEY = config("SECRET_KEY")
 
 DEBUG = config('DEBUG', default=False, cast=bool)
 
@@ -95,6 +95,7 @@ if DATABASE_URL:
             default=DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
+            ssl_require=config('DB_SSL_REQUIRE', default=True, cast=bool),
         )
     }
 elif DB_NAME:
